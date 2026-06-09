@@ -1,0 +1,52 @@
+@page
+@model KindHelp.Web.Pages.Admin.Cases.IndexModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Manage cases";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<div class="page-head">
+    <h1>Cases</h1>
+    <a asp-page="/Admin/Cases/Create" class="btn btn-primary">New case</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Category</th>
+            <th class="num">Raised</th>
+            <th class="num">Goal</th>
+            <th class="num">Donors</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Cases)
+        {
+            <tr>
+                <td>
+                    <strong>@c.Title</strong><br />
+                    <span class="muted small">/@c.Slug</span>
+                </td>
+                <td><span class="badge status-@c.Status.ToString().ToLower()">@c.Status</span></td>
+                <td>@c.Category</td>
+                <td class="num">@c.RaisedAmount.ToString("N0") @currency</td>
+                <td class="num">@(c.GoalAmount?.ToString("N0") ?? "—")</td>
+                <td class="num">@c.DonorCount</td>
+                <td>
+                    <a asp-page="/Admin/Cases/Edit" asp-route-id="@c.Id">Edit</a>
+                    | <a asp-page="/Admin/Cases/Updates" asp-route-id="@c.Id">Updates</a>
+                    | <a asp-page="/Admin/Cases/Photos" asp-route-id="@c.Id">Photos</a>
+                    | <a asp-page="/Admin/Contributions/Index" asp-route-caseId="@c.Id">Contributions</a>
+                </td>
+            </tr>
+        }
+        @if (!Model.Cases.Any())
+        {
+            <tr><td colspan="7" class="muted">No cases yet.</td></tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,63 @@
+@page
+@model KindHelp.Web.Pages.Admin.Contributions.CreateModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Record contribution";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<h1>Record a contribution</h1>
+<p class="muted">
+    Record a donation that has already been received offline. The donor will see it on their
+    private dashboard. Other donors will only see updated aggregate totals.
+</p>
+
+<form method="post" class="form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="form-row">
+        <label asp-for="Input.CaseId">Case</label>
+        <select asp-for="Input.CaseId">
+            <option value="">— select a case —</option>
+            @foreach (var c in Model.Cases)
+            {
+                <option value="@c.Id">@c.Title</option>
+            }
+        </select>
+        <span asp-validation-for="Input.CaseId" class="text-danger"></span>
+    </div>
+
+    <div class="form-row">
+        <label asp-for="Input.DonorEmail">Donor email</label>
+        <input asp-for="Input.DonorEmail" autocomplete="off" />
+        <span asp-validation-for="Input.DonorEmail" class="text-danger"></span>
+        <small class="muted">Must match an existing donor account. Donors register themselves first.</small>
+    </div>
+
+    <div class="form-grid-2">
+        <div class="form-row">
+            <label asp-for="Input.Amount">Amount (@currency)</label>
+            <input asp-for="Input.Amount" type="number" step="0.01" min="0.01" />
+            <span asp-validation-for="Input.Amount" class="text-danger"></span>
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.Method"></label>
+            <select asp-for="Input.Method" asp-items="Html.GetEnumSelectList<KindHelp.Web.Models.ContributionMethod>()"></select>
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.ReceivedAtUtc">Received on</label>
+            <input asp-for="Input.ReceivedAtUtc" type="date" />
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.Reference">Reference (optional)</label>
+            <input asp-for="Input.Reference" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save contribution</button>
+    <a asp-page="/Admin/Contributions/Index" class="ml-2">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

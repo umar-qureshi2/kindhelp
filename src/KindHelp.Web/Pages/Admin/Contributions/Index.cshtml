@@ -1,0 +1,77 @@
+@page
+@model KindHelp.Web.Pages.Admin.Contributions.IndexModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Contributions";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<div class="page-head">
+    <h1>Contributions</h1>
+    <a asp-page="/Admin/Contributions/Create" class="btn btn-primary">Record contribution</a>
+</div>
+
+<form method="get" class="filter-bar">
+    <label>
+        Case:
+        <select name="caseId" onchange="this.form.submit()">
+            <option value="">All cases</option>
+            @foreach (var c in Model.AllCases)
+            {
+                <option value="@c.Id" selected="@(Model.CaseId == c.Id ? "selected" : null)">@c.Title</option>
+            }
+        </select>
+    </label>
+</form>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Case</th>
+            <th>Donor</th>
+            <th class="num">Amount</th>
+            <th>Method</th>
+            <th>Reference</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Rows)
+        {
+            <tr>
+                <td>@c.ReceivedAtUtc.ToString("dd MMM yyyy")</td>
+                <td>@c.Case.Title</td>
+                <td>
+                    @(c.Donor.DisplayName ?? c.Donor.Email)
+                    <br /><span class="muted small">@c.Donor.Email</span>
+                </td>
+                <td class="num"><strong>@c.Amount.ToString("N0")</strong> @currency</td>
+                <td>@c.Method</td>
+                <td><span class="muted small">@c.Reference</span></td>
+                <td>
+                    <form method="post" asp-page-handler="Delete" class="inline">
+                        <input type="hidden" name="id" value="@c.Id" />
+                        <input type="hidden" name="caseId" value="@Model.CaseId" />
+                        <button class="link-button text-danger" type="submit"
+                                onclick="return confirm('Delete this contribution?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        @if (!Model.Rows.Any())
+        {
+            <tr><td colspan="7" class="muted">No contributions yet.</td></tr>
+        }
+    </tbody>
+    @if (Model.Rows.Any())
+    {
+        <tfoot>
+            <tr>
+                <td colspan="3"><strong>Total in view</strong></td>
+                <td class="num"><strong>@Model.Rows.Sum(x => x.Amount).ToString("N0") @currency</strong></td>
+                <td colspan="3"></td>
+            </tr>
+        </tfoot>
+    }
+</table>

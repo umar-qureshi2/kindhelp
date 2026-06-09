@@ -1,0 +1,38 @@
+## .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+
+## Build outputs
+publish/
+artifacts/
+
+## Runtime / data
+src/KindHelp.Web/wwwroot/uploads/*
+!src/KindHelp.Web/wwwroot/uploads/.gitkeep
+src/KindHelp.Web/App_Data/
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+## Environment / secrets
+**/appsettings.Production.json
+**/appsettings.Local.json
+**/appsettings.Development.json
+.env
+.env.*
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Claude Code — keep shared config, ignore per-developer state
+.claude/settings.local.json
+.claude/cache/
+.claude/logs/

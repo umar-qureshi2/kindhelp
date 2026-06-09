@@ -1,0 +1,48 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Create an account";
+}
+
+<div class="auth-card">
+    <h1>Create an account</h1>
+    <p class="muted">
+        Your participation is private. Other contributors will never see your name, email, or amount.
+    </p>
+
+    <form method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-row">
+            <label asp-for="Input.DisplayName"></label>
+            <input asp-for="Input.DisplayName" autocomplete="nickname" />
+            <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+            <small class="muted">Shown only to you and to admins.</small>
+        </div>
+
+        <div class="form-row">
+            <label asp-for="Input.Email"></label>
+            <input asp-for="Input.Email" autocomplete="email" />
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-row">
+            <label asp-for="Input.Password"></label>
+            <input asp-for="Input.Password" type="password" autocomplete="new-password" />
+            <span asp-validation-for="Input.Password" class="text-danger"></span>
+        </div>
+
+        <div class="form-row">
+            <label asp-for="Input.ConfirmPassword"></label>
+            <input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
+            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create account</button>
+        <a asp-page="/Account/Login" class="ml-2">I already have an account</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

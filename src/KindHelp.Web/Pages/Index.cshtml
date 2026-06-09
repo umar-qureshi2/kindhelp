@@ -1,0 +1,78 @@
+@page
+@model IndexModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Home";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<section class="hero">
+    <h1>Quiet kindness, real impact.</h1>
+    <p class="lead">
+        KindHelp is a private giving platform. Browse verified charity cases, read their full
+        history, and contribute on your own terms. Your support stays between you and us —
+        other contributors will never see who gave or how much.
+    </p>
+    <div class="hero-actions">
+        <a asp-page="/Cases/Index" class="btn btn-primary">Browse cases</a>
+        @if (!User.Identity?.IsAuthenticated ?? true)
+        {
+            <a asp-page="/Account/Register" class="btn btn-ghost">Create account</a>
+        }
+    </div>
+</section>
+
+<section class="featured-cases">
+    <div class="section-head">
+        <h2>Featured cases</h2>
+        <a asp-page="/Cases/Index">See all &rarr;</a>
+    </div>
+
+    @if (!Model.Featured.Any())
+    {
+        <p class="muted">No active cases right now. Please check back soon.</p>
+    }
+    else
+    {
+        <div class="case-grid">
+            @foreach (var c in Model.Featured)
+            {
+                <a class="case-card" asp-page="/Cases/Details" asp-route-slug="@c.Slug">
+                    <div class="case-card-media">
+                        @if (!string.IsNullOrEmpty(c.CoverPhotoPath))
+                        {
+                            <img src="@c.CoverPhotoPath" alt="@c.Title" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="case-card-placeholder">@c.Category</div>
+                        }
+                        <span class="case-card-badge status-@c.Status.ToString().ToLower()">@c.Status</span>
+                    </div>
+                    <div class="case-card-body">
+                        <h3>@c.Title</h3>
+                        <p>@c.Summary</p>
+                        <div class="case-card-meta">
+                            <span><strong>@c.RaisedAmount.ToString("N0") @currency</strong> raised</span>
+                            @if (c.GoalAmount.HasValue)
+                            {
+                                <span class="muted">of @c.GoalAmount.Value.ToString("N0")</span>
+                            }
+                            <span class="muted">&bull; @c.DonorCount supporters</span>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+<section class="privacy-note">
+    <h2>Why is everyone anonymous?</h2>
+    <p>
+        Many of our contributors prefer their kindness to remain quiet. Public donor lists,
+        leaderboards, and named "thank-you" walls are deliberately absent here. Each contributor
+        sees only their own activity. Aggregate totals on each case let you see the collective
+        impact without exposing anyone.
+    </p>
+</section>

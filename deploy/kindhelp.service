@@ -1,0 +1,20 @@
+[Unit]
+Description=KindHelp ASP.NET Core Web App
+After=network.target postgresql.service
+
+[Service]
+WorkingDirectory=/var/www/kindhelp
+ExecStart=/usr/bin/dotnet /var/www/kindhelp/KindHelp.Web.dll
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=kindhelp
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5080
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+# Connection string and admin credentials should be supplied via /etc/kindhelp/env
+EnvironmentFile=-/etc/kindhelp/env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,61 @@
+@page "{id:int}"
+@model KindHelp.Web.Pages.Admin.Cases.UpdatesModel
+@{
+    ViewData["Title"] = "Case updates";
+}
+
+@if (Model.Case is null)
+{
+    <h1>Case not found</h1>
+    <a asp-page="/Admin/Cases/Index">&larr; Back</a>
+}
+else
+{
+    <div class="page-head">
+        <h1>Updates — @Model.Case.Title</h1>
+        <a asp-page="/Admin/Cases/Edit" asp-route-id="@Model.Case.Id">&larr; Back to case</a>
+    </div>
+
+    <form method="post" class="form">
+        <input type="hidden" name="caseId" value="@Model.Case.Id" />
+        <div class="form-row">
+            <label asp-for="Input.Title"></label>
+            <input asp-for="Input.Title" />
+            <span asp-validation-for="Input.Title" class="text-danger"></span>
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.Body"></label>
+            <textarea asp-for="Input.Body" rows="6"></textarea>
+            <span asp-validation-for="Input.Body" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary">Post update</button>
+    </form>
+
+    <h2 class="mt-4">Posted updates</h2>
+    @if (!Model.Updates.Any())
+    {
+        <p class="muted">None yet.</p>
+    }
+    else
+    {
+        <ol class="timeline">
+            @foreach (var u in Model.Updates)
+            {
+                <li>
+                    <time>@u.PostedAtUtc.ToString("dd MMM yyyy HH:mm 'UTC'")</time>
+                    <h3>@u.Title</h3>
+                    <div>@Html.Raw(System.Net.WebUtility.HtmlEncode(u.Body).Replace("\n", "<br />"))</div>
+                    <form method="post" asp-page-handler="Delete" class="inline">
+                        <input type="hidden" name="updateId" value="@u.Id" />
+                        <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                        <button type="submit" class="link-button text-danger" onclick="return confirm('Delete this update?');">Delete</button>
+                    </form>
+                </li>
+            }
+        </ol>
+    }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,48 @@
+@page
+@model KindHelp.Web.Pages.My.ContributionsModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "My contributions";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<h1>All my contributions</h1>
+<p class="muted">A complete log of everything you've contributed. Visible only to you.</p>
+
+@if (!Model.Rows.Any())
+{
+    <p>No contributions yet. <a asp-page="/Cases/Index">Browse cases &rarr;</a></p>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Case</th>
+                <th class="num">Amount</th>
+                <th>Method</th>
+                <th>Reference</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td>@r.ReceivedAtUtc.ToString("dd MMM yyyy")</td>
+                    <td><a asp-page="/Cases/Details" asp-route-slug="@r.CaseSlug">@r.CaseTitle</a></td>
+                    <td class="num"><strong>@r.Amount.ToString("N0")</strong> @currency</td>
+                    <td>@r.Method</td>
+                    <td><span class="muted small">@r.Reference</span></td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2"><strong>Total</strong></td>
+                <td class="num"><strong>@Model.Rows.Sum(x => x.Amount).ToString("N0") @currency</strong></td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+}

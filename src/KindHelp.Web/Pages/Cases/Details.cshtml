@@ -1,0 +1,134 @@
+@page "{slug}"
+@model KindHelp.Web.Pages.Cases.DetailsModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = Model.View?.Case.Title ?? "Case";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+@if (Model.View is null)
+{
+    <h1>Case not found</h1>
+    <p>This case may have been closed or removed.</p>
+    <a asp-page="/Cases/Index">&larr; Back to all cases</a>
+}
+else
+{
+    var c = Model.View.Case;
+    var pct = c.GoalAmount is > 0
+        ? Math.Min(100, (int)Math.Round((double)(Model.View.RaisedAmount / c.GoalAmount.Value) * 100))
+        : 0;
+
+    <article class="case-detail">
+        <header class="case-detail-head">
+            <div class="breadcrumbs">
+                <a asp-page="/Cases/Index">Cases</a> &rsaquo; <span>@c.Title</span>
+            </div>
+            <h1>@c.Title</h1>
+            <div class="case-meta">
+                <span class="badge status-@c.Status.ToString().ToLower()">@c.Status</span>
+                <span class="muted">@c.Category</span>
+                @if (!string.IsNullOrWhiteSpace(c.Location))
+                {
+                    <span class="muted">&bull; @c.Location</span>
+                }
+            </div>
+        </header>
+
+        <div class="case-grid-2col">
+            <div class="case-main">
+                @if (Model.View.Photos.Any())
+                {
+                    <div class="case-gallery">
+                        @foreach (var p in Model.View.Photos)
+                        {
+                            <figure>
+                                <img src="@p.RelativePath" alt="@(p.Caption ?? c.Title)" loading="lazy" />
+                                @if (!string.IsNullOrWhiteSpace(p.Caption))
+                                {
+                                    <figcaption>@p.Caption</figcaption>
+                                }
+                            </figure>
+                        }
+                    </div>
+                }
+
+                <section class="case-summary">
+                    <h2>Summary</h2>
+                    <p>@c.Summary</p>
+                </section>
+
+                <section class="case-history">
+                    <h2>Full history &amp; details</h2>
+                    <div class="prose">@Html.Raw(System.Net.WebUtility.HtmlEncode(c.Description).Replace("\n", "<br />"))</div>
+                </section>
+
+                <section class="case-updates">
+                    <h2>Updates</h2>
+                    @if (!Model.View.Updates.Any())
+                    {
+                        <p class="muted">No updates yet. The first update will be posted as soon as there's progress to share.</p>
+                    }
+                    else
+                    {
+                        <ol class="timeline">
+                            @foreach (var u in Model.View.Updates)
+                            {
+                                <li>
+                                    <time>@u.PostedAtUtc.ToString("dd MMM yyyy")</time>
+                                    <h3>@u.Title</h3>
+                                    <div>@Html.Raw(System.Net.WebUtility.HtmlEncode(u.Body).Replace("\n", "<br />"))</div>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </section>
+            </div>
+
+            <aside class="case-side">
+                <div class="raise-box">
+                    <div class="raise-amount">@Model.View.RaisedAmount.ToString("N0") <small>@currency</small></div>
+                    @if (c.GoalAmount.HasValue)
+                    {
+                        <div class="raise-of muted">raised of @c.GoalAmount.Value.ToString("N0") goal</div>
+                        <div class="progress"><div class="progress-bar" style="width:@(pct)%"></div></div>
+                        <div class="muted small">@pct% funded</div>
+                    }
+                    else
+                    {
+                        <div class="raise-of muted">raised so far</div>
+                    }
+                    <div class="raise-supporters muted">@Model.View.DonorCount supporter@(Model.View.DonorCount == 1 ? "" : "s")</div>
+
+                    <hr />
+                    <h3>How to contribute</h3>
+                    <p class="small muted">
+                        Donations are recorded by our admins after they're received. Use the methods below
+                        and an admin will tag your contribution to your account.
+                    </p>
+                    <ul class="small">
+                        <li><strong>Bank transfer:</strong> details provided on request</li>
+                        <li><strong>Mobile wallet / cash:</strong> contact site admin</li>
+                    </ul>
+
+                    @if (User.Identity?.IsAuthenticated ?? false)
+                    {
+                        <p class="small">After sending, message the admin with your reference. You'll see it on <a asp-page="/My/Dashboard">your dashboard</a>.</p>
+                    }
+                    else
+                    {
+                        <a asp-page="/Account/Register" class="btn btn-primary btn-block">Create an account</a>
+                        <p class="small muted">An account lets you privately track everything you've contributed.</p>
+                    }
+                </div>
+
+                <div class="privacy-side">
+                    <h4>Privacy</h4>
+                    <p class="small muted">
+                        We never publish donor names, emails, or amounts. Only the totals you see here.
+                    </p>
+                </div>
+            </aside>
+        </div>
+    </article>
+}

@@ -1,0 +1,73 @@
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IConfiguration Config
+@{
+    var siteName = Config["KindHelp:SiteName"] ?? "KindHelp";
+    var tagline = Config["KindHelp:SiteTagline"] ?? "Quiet kindness, real impact.";
+    var isAdmin = SignInManager.IsSignedIn(User) && User.IsInRole(Roles.Admin);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"]) - @siteName</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-row">
+            <a class="brand" asp-page="/Index">
+                <span class="brand-mark">&#10084;</span>
+                <span class="brand-name">@siteName</span>
+            </a>
+            <nav class="primary-nav">
+                <a asp-page="/Index">Home</a>
+                <a asp-page="/Cases/Index">Cases</a>
+                <a asp-page="/About">About</a>
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <a asp-page="/My/Dashboard">My Dashboard</a>
+                }
+                @if (isAdmin)
+                {
+                    <a asp-page="/Admin/Index">Admin</a>
+                }
+            </nav>
+            <div class="auth-nav">
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <span class="who">@User.Identity?.Name</span>
+                    <form asp-page="/Account/Logout" method="post" class="inline">
+                        <button type="submit" class="link-button">Sign out</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-page="/Account/Login">Sign in</a>
+                    <a asp-page="/Account/Register" class="btn btn-primary btn-sm">Register</a>
+                }
+            </div>
+        </div>
+        <div class="tagline-strip">
+            <div class="container">@tagline</div>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        @if (TempData["StatusMessage"] is string msg && !string.IsNullOrEmpty(msg))
+        {
+            <div class="alert alert-info">@msg</div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; @DateTime.UtcNow.Year @siteName. Contributions remain private — donors are never visible to other donors.</p>
+        </div>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

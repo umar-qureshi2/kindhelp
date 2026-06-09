@@ -1,0 +1,72 @@
+@page "{id:int}"
+@model KindHelp.Web.Pages.Admin.Cases.PhotosModel
+@{
+    ViewData["Title"] = "Case photos";
+}
+
+@if (Model.Case is null)
+{
+    <h1>Case not found</h1>
+    <a asp-page="/Admin/Cases/Index">&larr; Back</a>
+}
+else
+{
+    <div class="page-head">
+        <h1>Photos — @Model.Case.Title</h1>
+        <a asp-page="/Admin/Cases/Edit" asp-route-id="@Model.Case.Id">&larr; Back to case</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="form">
+        <input type="hidden" name="caseId" value="@Model.Case.Id" />
+        <div class="form-row">
+            <label for="upload">Upload an image</label>
+            <input id="upload" type="file" name="upload" accept="image/*" required />
+        </div>
+        <div class="form-row">
+            <label for="caption">Caption (optional)</label>
+            <input id="caption" type="text" name="caption" maxlength="200" />
+        </div>
+        <div class="form-row checkbox">
+            <label><input type="checkbox" name="isCover" value="true" /> Set as cover photo</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+
+    <h2 class="mt-4">Uploaded photos</h2>
+    @if (!Model.Photos.Any())
+    {
+        <p class="muted">No photos yet.</p>
+    }
+    else
+    {
+        <div class="photo-grid">
+            @foreach (var p in Model.Photos)
+            {
+                <div class="photo-tile @(p.IsCover ? "is-cover" : "")">
+                    <img src="@p.RelativePath" alt="" />
+                    <div class="photo-meta">
+                        <div class="muted small">@(p.Caption ?? "no caption")</div>
+                        @if (p.IsCover)
+                        {
+                            <div class="badge">Cover</div>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="SetCover" class="inline">
+                                <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                                <input type="hidden" name="photoId" value="@p.Id" />
+                                <button class="link-button" type="submit">Make cover</button>
+                            </form>
+                        }
+                        <form method="post" asp-page-handler="Delete" class="inline">
+                            <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                            <input type="hidden" name="photoId" value="@p.Id" />
+                            <button class="link-button text-danger" type="submit"
+                                    onclick="return confirm('Delete this photo?');">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}

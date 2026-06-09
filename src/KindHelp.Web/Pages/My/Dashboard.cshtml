@@ -1,0 +1,94 @@
+@page
+@model KindHelp.Web.Pages.My.DashboardModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "My dashboard";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<div class="dashboard-head">
+    <h1>Your private dashboard</h1>
+    <p class="muted">
+        Only you can see this page. Other contributors do not see your name, your activity, or these totals.
+    </p>
+</div>
+
+<div class="stat-row">
+    <div class="stat-card">
+        <div class="stat-label">Total contributed</div>
+        <div class="stat-value">@Model.TotalContributed.ToString("N0") <small>@currency</small></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Cases supported</div>
+        <div class="stat-value">@Model.Summaries.Count</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Contributions made</div>
+        <div class="stat-value">@Model.Summaries.Sum(s => s.MyContributionCount)</div>
+    </div>
+</div>
+
+<section>
+    <div class="section-head">
+        <h2>Cases you've supported</h2>
+        <a asp-page="/My/Contributions">All my contributions &rarr;</a>
+    </div>
+
+    @if (!Model.Summaries.Any())
+    {
+        <p class="muted">You haven't contributed to any cases yet. <a asp-page="/Cases/Index">Browse open cases &rarr;</a></p>
+    }
+    else
+    {
+        <div class="my-case-grid">
+            @foreach (var s in Model.Summaries)
+            {
+                <a class="my-case-card" asp-page="/Cases/Details" asp-route-slug="@s.Slug">
+                    <div class="my-case-media">
+                        @if (!string.IsNullOrEmpty(s.CoverPhotoPath))
+                        {
+                            <img src="@s.CoverPhotoPath" alt="@s.Title" />
+                        }
+                        else
+                        {
+                            <div class="case-card-placeholder">@s.Title.Substring(0, Math.Min(2, s.Title.Length))</div>
+                        }
+                    </div>
+                    <div class="my-case-body">
+                        <h3>@s.Title</h3>
+                        <div class="muted small">@s.Status</div>
+                        <div class="my-case-meta">
+                            <span><strong>@s.MyTotal.ToString("N0") @currency</strong> from you</span>
+                            <span class="muted">&bull; @s.MyContributionCount entr@(s.MyContributionCount == 1 ? "y" : "ies")</span>
+                        </div>
+                        <div class="muted small">Last on @s.LastContributionUtc.ToString("dd MMM yyyy")</div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>Recent updates from cases you support</h2>
+    </div>
+
+    @if (!Model.Updates.Any())
+    {
+        <p class="muted">No updates yet from cases you've supported.</p>
+    }
+    else
+    {
+        <ol class="timeline">
+            @foreach (var u in Model.Updates)
+            {
+                <li>
+                    <time>@u.PostedAtUtc.ToString("dd MMM yyyy")</time>
+                    <h3><a asp-page="/Cases/Details" asp-route-slug="@u.CaseSlug">@u.CaseTitle</a> — @u.UpdateTitle</h3>
+                    <div>@Html.Raw(System.Net.WebUtility.HtmlEncode(u.UpdateBody).Replace("\n", "<br />"))</div>
+                </li>
+            }
+        </ol>
+    }
+</section>
