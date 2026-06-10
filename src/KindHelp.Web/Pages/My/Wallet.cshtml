@@ -1,0 +1,71 @@
+@page
+@model KindHelp.Web.Pages.My.WalletModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "My wallet";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+<h1>Your wallet</h1>
+<p class="muted">All deposits and case allocations on one private page. Only you can see this.</p>
+
+<div class="wallet-balance-card">
+    <div class="label">Current balance</div>
+    <div class="amount">@Model.Balance.ToString("N0") <small>@currency</small></div>
+    <div class="sublabel">Available to allocate to cases</div>
+</div>
+
+<div class="section-head"><h2>Transaction history</h2></div>
+
+@if (!Model.History.Items.Any())
+{
+    <p class="muted">No transactions yet. When you contribute (online or offline), an admin will record it here.</p>
+}
+else
+{
+    <div class="txn-list">
+        @foreach (var t in Model.History.Items)
+        {
+            var iconClass = t.Type switch
+            {
+                KindHelp.Web.Models.WalletTransactionType.Deposit    => "deposit",
+                KindHelp.Web.Models.WalletTransactionType.Allocation => "allocation",
+                KindHelp.Web.Models.WalletTransactionType.Refund     => "refund",
+                _                                                    => "adjust"
+            };
+            var sign = t.Amount >= 0 ? "+" : "-";
+            var amountClass = t.Amount >= 0 ? "credit" : "debit";
+            <div class="txn-row">
+                <div class="txn-icon @iconClass">
+                    @switch (t.Type)
+                    {
+                        case KindHelp.Web.Models.WalletTransactionType.Deposit:    <text>&uarr;</text> break;
+                        case KindHelp.Web.Models.WalletTransactionType.Allocation: <text>&rarr;</text> break;
+                        case KindHelp.Web.Models.WalletTransactionType.Refund:     <text>&darr;</text> break;
+                        default:                                                   <text>&plusmn;</text> break;
+                    }
+                </div>
+                <div>
+                    <div class="txn-title">
+                        @switch (t.Type)
+                        {
+                            case KindHelp.Web.Models.WalletTransactionType.Deposit:    <text>Deposit to your wallet</text> break;
+                            case KindHelp.Web.Models.WalletTransactionType.Allocation: <text>Allocated to <a asp-page="/Cases/Details" asp-route-slug="@t.CaseSlug">@t.CaseTitle</a></text> break;
+                            case KindHelp.Web.Models.WalletTransactionType.Refund:     <text>Refund</text> break;
+                            default:                                                   <text>Adjustment</text> break;
+                        }
+                    </div>
+                    <div class="txn-meta">
+                        @t.OccurredAtUtc.ToString("dd MMM yyyy")
+                        @if (!string.IsNullOrWhiteSpace(t.Reference)) { <text>&middot; ref @t.Reference</text> }
+                        @if (t.Method.HasValue) { <text>&middot; @t.Method</text> }
+                        <text> &middot; balance after: @t.BalanceAfter.ToString("N0") @currency</text>
+                    </div>
+                </div>
+                <div class="txn-amount @amountClass">@sign@Math.Abs(t.Amount).ToString("N0") <span class="muted small">@currency</span></div>
+            </div>
+        }
+    </div>
+
+    <partial name="_Pager" model="@(new KindHelp.Web.Pages.Shared.PagerModel("/My/Wallet", Model.History.PageIndex, Model.History.TotalPages, null))" />
+}

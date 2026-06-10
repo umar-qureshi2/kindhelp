@@ -7,9 +7,9 @@
 }
 
 <h1>All my contributions</h1>
-<p class="muted">A complete log of everything you've contributed. Visible only to you.</p>
+<p class="muted">A complete log of every wallet allocation to a case. Visible only to you.</p>
 
-@if (!Model.Rows.Any())
+@if (!Model.Rows.Items.Any())
 {
     <p>No contributions yet. <a asp-page="/Cases/Index">Browse cases &rarr;</a></p>
 }
@@ -21,28 +21,21 @@ else
                 <th>Date</th>
                 <th>Case</th>
                 <th class="num">Amount</th>
-                <th>Method</th>
                 <th>Reference</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var r in Model.Rows)
+            @foreach (var r in Model.Rows.Items)
             {
                 <tr>
                     <td>@r.ReceivedAtUtc.ToString("dd MMM yyyy")</td>
                     <td><a asp-page="/Cases/Details" asp-route-slug="@r.CaseSlug">@r.CaseTitle</a></td>
                     <td class="num"><strong>@r.Amount.ToString("N0")</strong> @currency</td>
-                    <td>@r.Method</td>
                     <td><span class="muted small">@r.Reference</span></td>
                 </tr>
             }
         </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="2"><strong>Total</strong></td>
-                <td class="num"><strong>@Model.Rows.Sum(x => x.Amount).ToString("N0") @currency</strong></td>
-                <td colspan="2"></td>
-            </tr>
-        </tfoot>
     </table>
+
+    <partial name="_Pager" model="@(new KindHelp.Web.Pages.Shared.PagerModel("/My/Contributions", Model.Rows.PageIndex, Model.Rows.TotalPages, null))" />
 }

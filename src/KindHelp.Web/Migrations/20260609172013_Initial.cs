@@ -186,6 +186,32 @@ namespace KindHelp.Web.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Donors",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DisplayName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    PhoneNumber = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    ApplicationUserId = table.Column<string>(type: "text", nullable: true),
+                    WalletBalance = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    Notes = table.Column<string>(type: "character varying(800)", maxLength: 800, nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Donors", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Donors_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CasePhotos",
                 columns: table => new
                 {
@@ -239,27 +265,69 @@ namespace KindHelp.Web.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     CaseId = table.Column<int>(type: "integer", nullable: false),
-                    DonorUserId = table.Column<string>(type: "text", nullable: false),
+                    DonorId = table.Column<int>(type: "integer", nullable: false),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     Method = table.Column<int>(type: "integer", nullable: false),
                     ReceivedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Reference = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: true),
                     RecordedByUserId = table.Column<string>(type: "text", nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    WalletTransactionId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Contributions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Contributions_AspNetUsers_DonorUserId",
-                        column: x => x.DonorUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_Contributions_Cases_CaseId",
                         column: x => x.CaseId,
                         principalTable: "Cases",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Contributions_Donors_DonorId",
+                        column: x => x.DonorId,
+                        principalTable: "Donors",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "WalletTransactions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DonorId = table.Column<int>(type: "integer", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    BalanceAfter = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    OccurredAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Reference = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: true),
+                    Method = table.Column<int>(type: "integer", nullable: true),
+                    CaseId = table.Column<int>(type: "integer", nullable: true),
+                    ContributionId = table.Column<int>(type: "integer", nullable: true),
+                    RecordedByUserId = table.Column<string>(type: "text", nullable: true),
+                    Notes = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_WalletTransactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_WalletTransactions_Cases_CaseId",
+                        column: x => x.CaseId,
+                        principalTable: "Cases",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_WalletTransactions_Contributions_ContributionId",
+                        column: x => x.ContributionId,
+                        principalTable: "Contributions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_WalletTransactions_Donors_DonorId",
+                        column: x => x.DonorId,
+                        principalTable: "Donors",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -328,9 +396,46 @@ namespace KindHelp.Web.Migrations
                 columns: new[] { "CaseId", "ReceivedAtUtc" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Contributions_DonorUserId",
+                name: "IX_Contributions_DonorId",
                 table: "Contributions",
-                column: "DonorUserId");
+                column: "DonorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Donors_ApplicationUserId",
+                table: "Donors",
+                column: "ApplicationUserId",
+                unique: true,
+                filter: "\"ApplicationUserId\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Donors_Email",
+                table: "Donors",
+                column: "Email",
+                unique: true,
+                filter: "\"Email\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Donors_PhoneNumber",
+                table: "Donors",
+                column: "PhoneNumber",
+                unique: true,
+                filter: "\"PhoneNumber\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WalletTransactions_CaseId_OccurredAtUtc",
+                table: "WalletTransactions",
+                columns: new[] { "CaseId", "OccurredAtUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WalletTransactions_ContributionId",
+                table: "WalletTransactions",
+                column: "ContributionId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WalletTransactions_DonorId_OccurredAtUtc",
+                table: "WalletTransactions",
+                columns: new[] { "DonorId", "OccurredAtUtc" });
         }
 
         /// <inheritdoc />
@@ -358,16 +463,22 @@ namespace KindHelp.Web.Migrations
                 name: "CaseUpdates");
 
             migrationBuilder.DropTable(
-                name: "Contributions");
+                name: "WalletTransactions");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Contributions");
 
             migrationBuilder.DropTable(
                 name: "Cases");
+
+            migrationBuilder.DropTable(
+                name: "Donors");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }

@@ -18,5 +18,10 @@ public class ApplicationUser : IdentityUser
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
-    public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
+    /// <summary>
+    /// Linked donor profile (auto-created on registration). Null only briefly between
+    /// account creation and first donor row insert. Contributions and wallet operations
+    /// hang off the Donor entity, not directly off ApplicationUser.
+    /// </summary>
+    public Donor? Donor { get; set; }
 }

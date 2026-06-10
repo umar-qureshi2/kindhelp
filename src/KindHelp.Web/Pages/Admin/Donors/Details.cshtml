@@ -1,0 +1,101 @@
+@page "{id:int}"
+@model KindHelp.Web.Pages.Admin.Donors.DetailsModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Donor details";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+@if (Model.Donor is null)
+{
+    <h1>Donor not found</h1>
+    <a asp-page="/Admin/Donors/Index">&larr; Back</a>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="breadcrumbs muted small"><a asp-page="/Admin/Donors/Index">Donors</a> &rsaquo; <span>@Model.Donor.Label</span></div>
+            <h1>@Model.Donor.Label</h1>
+            <div class="row">
+                @if (!string.IsNullOrWhiteSpace(Model.Donor.Email))   { <span class="muted small">@Model.Donor.Email</span> }
+                @if (!string.IsNullOrWhiteSpace(Model.Donor.PhoneNumber)) { <span class="muted small">@Model.Donor.PhoneNumber</span> }
+                @if (Model.Donor.ApplicationUserId is not null)       { <span class="badge status-active">Registered</span> }
+                else                                                  { <span class="badge">Admin-managed</span> }
+            </div>
+        </div>
+        <div class="row">
+            <a asp-page="/Admin/Donors/Deposit" asp-route-id="@Model.Donor.Id" class="btn btn-primary">+ Deposit</a>
+            <a asp-page="/Admin/Contributions/Create" asp-route-donorId="@Model.Donor.Id" class="btn">Allocate to case</a>
+            <a asp-page="/Admin/Donors/Edit" asp-route-id="@Model.Donor.Id" class="btn">Edit</a>
+        </div>
+    </div>
+
+    <div class="wallet-balance-card">
+        <div class="label">Wallet balance</div>
+        <div class="amount">@Model.Donor.WalletBalance.ToString("N0") <small>@currency</small></div>
+        <div class="sublabel">Available to allocate to cases</div>
+    </div>
+
+    <div class="section-head"><h2>Wallet history</h2></div>
+    @if (!Model.History.Items.Any())
+    {
+        <p class="muted">No transactions yet.</p>
+    }
+    else
+    {
+        <div class="txn-list">
+            @foreach (var t in Model.History.Items)
+            {
+                var iconClass = t.Type switch
+                {
+                    KindHelp.Web.Models.WalletTransactionType.Deposit    => "deposit",
+                    KindHelp.Web.Models.WalletTransactionType.Allocation => "allocation",
+                    KindHelp.Web.Models.WalletTransactionType.Refund     => "refund",
+                    _                                                    => "adjust"
+                };
+                var sign = t.Amount >= 0 ? "+" : "-";
+                var amountClass = t.Amount >= 0 ? "credit" : "debit";
+                <div class="txn-row">
+                    <div class="txn-icon @iconClass">
+                        @switch (t.Type)
+                        {
+                            case KindHelp.Web.Models.WalletTransactionType.Deposit:    <text>&uarr;</text> break;
+                            case KindHelp.Web.Models.WalletTransactionType.Allocation: <text>&rarr;</text> break;
+                            case KindHelp.Web.Models.WalletTransactionType.Refund:     <text>&darr;</text> break;
+                            default:                                                   <text>&plusmn;</text> break;
+                        }
+                    </div>
+                    <div>
+                        <div class="txn-title">
+                            @switch (t.Type)
+                            {
+                                case KindHelp.Web.Models.WalletTransactionType.Deposit:    <text>Deposit</text> break;
+                                case KindHelp.Web.Models.WalletTransactionType.Allocation: <text>Allocated to <a asp-page="/Cases/Details" asp-route-slug="@t.CaseSlug">@t.CaseTitle</a></text> break;
+                                case KindHelp.Web.Models.WalletTransactionType.Refund:     <text>Refund</text> break;
+                                default:                                                   <text>Adjustment</text> break;
+                            }
+                        </div>
+                        <div class="txn-meta">
+                            @t.OccurredAtUtc.ToString("dd MMM yyyy")
+                            @if (!string.IsNullOrWhiteSpace(t.Reference)) { <text>&middot; @t.Reference</text> }
+                            @if (t.Method.HasValue) { <text>&middot; @t.Method</text> }
+                            <text> &middot; balance after: @t.BalanceAfter.ToString("N0") @currency</text>
+                        </div>
+                    </div>
+                    <div class="txn-amount @amountClass">@sign@Math.Abs(t.Amount).ToString("N0") <span class="muted small">@currency</span></div>
+                </div>
+            }
+        </div>
+
+        <partial name="_Pager" model="@(new KindHelp.Web.Pages.Shared.PagerModel("/Admin/Donors/Details", Model.History.PageIndex, Model.History.TotalPages, new Dictionary<string, string?> { ["id"] = Model.Donor.Id.ToString() }))" />
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.Donor.Notes))
+    {
+        <div class="section-head"><h2>Admin notes</h2></div>
+        <div class="raise-box">
+            <p style="white-space: pre-wrap; margin: 0;">@Model.Donor.Notes</p>
+        </div>
+    }
+}

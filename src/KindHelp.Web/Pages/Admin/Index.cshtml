@@ -25,10 +25,17 @@
         <div class="stat-label">Donors</div>
         <div class="stat-value">@Model.DonorCount</div>
     </div>
+    <div class="stat-card">
+        <div class="stat-label">Wallets total (uncommitted)</div>
+        <div class="stat-value">@Model.WalletsTotal.ToString("N0") <small>@currency</small></div>
+    </div>
 </div>
 
 <div class="admin-actions">
-    <a asp-page="/Admin/Cases/Create" class="btn btn-primary">New case</a>
-    <a asp-page="/Admin/Cases/Index" class="btn">Manage cases</a>
-    <a asp-page="/Admin/Contributions/Index" class="btn">Manage contributions</a>
+    <a asp-page="/Admin/Cases/Create" class="btn btn-primary">+ New case</a>
+    <a asp-page="/Admin/Donors/Create" class="btn">+ New donor</a>
+    <a asp-page="/Admin/Contributions/Create" class="btn">Allocate to case</a>
+    <a asp-page="/Admin/Cases/Index" class="btn btn-ghost">Manage cases</a>
+    <a asp-page="/Admin/Donors/Index" class="btn btn-ghost">Manage donors</a>
+    <a asp-page="/Admin/Contributions/Index" class="btn btn-ghost">All contributions</a>
 </div>

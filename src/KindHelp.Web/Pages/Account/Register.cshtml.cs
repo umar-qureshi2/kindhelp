@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using KindHelp.Web.Models;
+using KindHelp.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,15 +13,18 @@ public class RegisterModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IDonorService _donors;
     private readonly ILogger<RegisterModel> _logger;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        IDonorService donors,
         ILogger<RegisterModel> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _donors = donors;
         _logger = logger;
     }
 
@@ -61,6 +65,10 @@ public class RegisterModel : PageModel
         if (result.Succeeded)
         {
             await _userManager.AddToRoleAsync(user, Roles.Donor);
+
+            // Create (or claim an admin-managed) Donor row + wallet, linked to this user.
+            await _donors.EnsureForUserAsync(user);
+
             _logger.LogInformation("New donor account created: {Email}", Input.Email);
             await _signInManager.SignInAsync(user, isPersistent: false);
             return RedirectToPage("/My/Dashboard");

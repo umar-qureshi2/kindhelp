@@ -8,31 +8,33 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace KindHelp.Web.Pages.My;
 
 [Authorize]
-public class DashboardModel : PageModel
+public class DashboardModel : MyPageBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
     private readonly IContributionService _contributions;
 
-    public DashboardModel(UserManager<ApplicationUser> userManager, IContributionService contributions)
+    public DashboardModel(
+        UserManager<ApplicationUser> userManager,
+        IDonorService donors,
+        IContributionService contributions)
+        : base(userManager, donors)
     {
-        _userManager = userManager;
         _contributions = contributions;
     }
 
     public IReadOnlyList<DonorCaseSummary> Summaries { get; private set; } = Array.Empty<DonorCaseSummary>();
     public IReadOnlyList<DonorUpdateRow> Updates { get; private set; } = Array.Empty<DonorUpdateRow>();
     public decimal TotalContributed { get; private set; }
+    public decimal WalletBalance { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
-        // PRIVACY: always derive userId from the authenticated principal.
-        // Never accept it from a query string or form post.
-        var userId = _userManager.GetUserId(User);
-        if (string.IsNullOrEmpty(userId)) return Challenge();
+        var donor = await ResolveCurrentDonorAsync(ct);
+        if (donor is null) return Challenge();
 
-        Summaries = await _contributions.GetMyCaseSummariesAsync(userId, ct);
-        Updates = await _contributions.GetMyCaseUpdatesAsync(userId, max: 10, ct);
+        Summaries = await _contributions.GetMyCaseSummariesAsync(donor.Id, ct);
+        Updates = await _contributions.GetMyCaseUpdatesAsync(donor.Id, max: 10, ct);
         TotalContributed = Summaries.Sum(s => s.MyTotal);
+        WalletBalance = donor.WalletBalance;
         return Page();
     }
 }

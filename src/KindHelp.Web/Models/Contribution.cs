@@ -13,7 +13,11 @@ public enum ContributionMethod
 }
 
 /// <summary>
-/// A donation recorded against a specific case for a specific donor.
+/// Money allocated from a donor's wallet to a specific case. Every contribution is created
+/// by a <see cref="WalletTransaction"/> of type <c>Allocation</c>; the link is two-way.
+/// The original payment method lives on the originating <c>Deposit</c> WalletTransaction —
+/// not duplicated here.
+///
 /// PRIVACY RULE: This record must NEVER be exposed to any user other than:
 ///   (a) the donor themselves (own dashboard), or
 ///   (b) an admin (admin pages).
@@ -26,15 +30,12 @@ public class Contribution
     public int CaseId { get; set; }
     public Case Case { get; set; } = null!;
 
-    /// <summary>Donor's user id. Required — every donation must be tied to an account so the donor can see it on their own dashboard.</summary>
-    [Required]
-    public string DonorUserId { get; set; } = string.Empty;
-    public ApplicationUser Donor { get; set; } = null!;
+    /// <summary>The donor whose wallet funded this contribution.</summary>
+    public int DonorId { get; set; }
+    public Donor Donor { get; set; } = null!;
 
     [Range(0.01, 9_999_999_999)]
     public decimal Amount { get; set; }
-
-    public ContributionMethod Method { get; set; } = ContributionMethod.BankTransfer;
 
     public DateTime ReceivedAtUtc { get; set; } = DateTime.UtcNow;
 
@@ -46,4 +47,8 @@ public class Contribution
     public string? RecordedByUserId { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>The WalletTransaction (type=Allocation) that debited the donor's wallet to fund this contribution.</summary>
+    public int? WalletTransactionId { get; set; }
+    public WalletTransaction? WalletTransaction { get; set; }
 }

@@ -141,6 +141,12 @@ $dev = [ordered]@{
     ConnectionStrings = @{
         DefaultConnection = "Host=localhost;Port=5432;Database=kindhelp;Username=kindhelp;Password=$KindHelpDbPassword"
     }
+    KindHelp = @{
+        # Dev-only admin seed. The committed appsettings.json intentionally leaves these blank;
+        # appsettings.Development.json (gitignored) supplies them locally so the first run still works.
+        DefaultAdminEmail    = "admin@kindhelp.local"
+        DefaultAdminPassword = "ChangeMe!2026"
+    }
     Logging = @{
         LogLevel = @{
             Default = "Information"

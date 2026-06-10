@@ -2,23 +2,56 @@
 @model KindHelp.Web.Pages.Admin.Contributions.CreateModel
 @inject IConfiguration Config
 @{
-    ViewData["Title"] = "Record contribution";
+    ViewData["Title"] = "Allocate to case";
     var currency = Config["KindHelp:Currency"] ?? "PKR";
 }
 
-<h1>Record a contribution</h1>
+<h1>Allocate from wallet to a case</h1>
 <p class="muted">
-    Record a donation that has already been received offline. The donor will see it on their
-    private dashboard. Other donors will only see updated aggregate totals.
+    Pick an existing donor (start typing — the list filters as you go) or create a new one
+    inline by leaving the picker empty and filling the email/phone fields below. The amount
+    is debited from the donor's wallet and recorded as a contribution to the chosen case.
 </p>
 
-<form method="post" class="form">
+<form method="post" class="form" style="max-width: 720px;">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
+    <h2 style="font-size: 1.05rem; margin-top: 22px;">1. Donor</h2>
+
+    <div class="form-row">
+        <label for="donor-search">Existing donor</label>
+        <input id="donor-search" list="donor-options" name="donorSearch" value="@Model.SelectedDonorLabel"
+               placeholder="Start typing a name, email, or phone" autocomplete="off" />
+        <input type="hidden" asp-for="Input.DonorId" id="donor-id-hidden" />
+        <datalist id="donor-options">
+            @foreach (var d in Model.Donors)
+            {
+                <option data-id="@d.Id" value="@d.Label — wallet @d.WalletBalance.ToString("N0") @currency"></option>
+            }
+        </datalist>
+        <small>Leave this field empty to create / look up by email or phone below.</small>
+    </div>
+
+    <div class="form-grid-2">
+        <div class="form-row">
+            <label asp-for="Input.NewDonorEmail">New donor email <span class="muted small">(one of email / phone needed)</span></label>
+            <input asp-for="Input.NewDonorEmail" type="email" autocomplete="off" />
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.NewDonorPhone">New donor phone</label>
+            <input asp-for="Input.NewDonorPhone" type="tel" autocomplete="off" />
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.NewDonorName">New donor display name <span class="muted small">(optional)</span></label>
+            <input asp-for="Input.NewDonorName" autocomplete="off" />
+        </div>
+    </div>
+
+    <h2 style="font-size: 1.05rem; margin-top: 22px;">2. Case</h2>
     <div class="form-row">
         <label asp-for="Input.CaseId">Case</label>
         <select asp-for="Input.CaseId">
-            <option value="">— select a case —</option>
+            <option value="0">— select a case —</option>
             @foreach (var c in Model.Cases)
             {
                 <option value="@c.Id">@c.Title</option>
@@ -27,37 +60,56 @@
         <span asp-validation-for="Input.CaseId" class="text-danger"></span>
     </div>
 
-    <div class="form-row">
-        <label asp-for="Input.DonorEmail">Donor email</label>
-        <input asp-for="Input.DonorEmail" autocomplete="off" />
-        <span asp-validation-for="Input.DonorEmail" class="text-danger"></span>
-        <small class="muted">Must match an existing donor account. Donors register themselves first.</small>
-    </div>
-
+    <h2 style="font-size: 1.05rem; margin-top: 22px;">3. Amount</h2>
     <div class="form-grid-2">
         <div class="form-row">
             <label asp-for="Input.Amount">Amount (@currency)</label>
             <input asp-for="Input.Amount" type="number" step="0.01" min="0.01" />
             <span asp-validation-for="Input.Amount" class="text-danger"></span>
+            <small>Must be &le; the donor's wallet balance. Deposit first if needed.</small>
         </div>
         <div class="form-row">
-            <label asp-for="Input.Method"></label>
-            <select asp-for="Input.Method" asp-items="Html.GetEnumSelectList<KindHelp.Web.Models.ContributionMethod>()"></select>
-        </div>
-        <div class="form-row">
-            <label asp-for="Input.ReceivedAtUtc">Received on</label>
+            <label asp-for="Input.ReceivedAtUtc">Allocated on</label>
             <input asp-for="Input.ReceivedAtUtc" type="date" />
-        </div>
-        <div class="form-row">
-            <label asp-for="Input.Reference">Reference (optional)</label>
-            <input asp-for="Input.Reference" />
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary">Save contribution</button>
-    <a asp-page="/Admin/Contributions/Index" class="ml-2">Cancel</a>
+    <div class="form-row">
+        <label asp-for="Input.Reference">Reference <span class="muted small">(optional)</span></label>
+        <input asp-for="Input.Reference" />
+    </div>
+
+    <div class="row">
+        <button type="submit" class="btn btn-primary">Allocate</button>
+        <a asp-page="/Admin/Contributions/Index" class="btn">Cancel</a>
+    </div>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // When the admin picks an option from the datalist, look up the donor id by label
+        // and copy it into the hidden field. Typing a value that doesn't exactly match an
+        // option leaves the hidden field empty, falling back to the email/phone form below.
+        (function () {
+            var input = document.getElementById('donor-search');
+            var hidden = document.getElementById('donor-id-hidden');
+            if (!input || !hidden) return;
+            var list = document.getElementById('donor-options');
+            function resolve() {
+                var val = input.value;
+                hidden.value = '0';
+                if (!val || !list) return;
+                for (var i = 0; i < list.options.length; i++) {
+                    if (list.options[i].value === val) {
+                        hidden.value = list.options[i].getAttribute('data-id') || '0';
+                        break;
+                    }
+                }
+            }
+            input.addEventListener('input', resolve);
+            input.addEventListener('change', resolve);
+            resolve();
+        })();
+    </script>
 }

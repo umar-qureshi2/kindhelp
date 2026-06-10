@@ -1,0 +1,34 @@
+@model KindHelp.Web.Pages.Shared.PagerModel
+@if (Model.TotalPages > 1)
+{
+    var prev = Model.PageIndex - 1;
+    var next = Model.PageIndex + 1;
+    Dictionary<string, string?> qsPrev = Model.ExtraQuery is null
+        ? new() : new(Model.ExtraQuery);
+    Dictionary<string, string?> qsNext = Model.ExtraQuery is null
+        ? new() : new(Model.ExtraQuery);
+    qsPrev["pageIndex"] = prev.ToString();
+    qsNext["pageIndex"] = next.ToString();
+
+    <nav class="pager" aria-label="Pagination">
+        @if (Model.PageIndex > 1)
+        {
+            <a class="btn btn-sm" asp-page="@Model.Page" asp-all-route-data="qsPrev">&larr; Previous</a>
+        }
+        else
+        {
+            <span class="btn btn-sm" aria-disabled="true" style="opacity: 0.5; pointer-events: none;">&larr; Previous</span>
+        }
+
+        <span class="pager-info muted small">Page @Model.PageIndex of @Model.TotalPages</span>
+
+        @if (Model.PageIndex < Model.TotalPages)
+        {
+            <a class="btn btn-sm" asp-page="@Model.Page" asp-all-route-data="qsNext">Next &rarr;</a>
+        }
+        else
+        {
+            <span class="btn btn-sm" aria-disabled="true" style="opacity: 0.5; pointer-events: none;">Next &rarr;</span>
+        }
+    </nav>
+}

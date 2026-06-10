@@ -16,12 +16,14 @@ public class IndexModel : PageModel
     public int ActiveCases { get; private set; }
     public decimal TotalRaised { get; private set; }
     public int DonorCount { get; private set; }
+    public decimal WalletsTotal { get; private set; }
 
     public async Task OnGetAsync(CancellationToken ct)
     {
         TotalCases = await _db.Cases.CountAsync(ct);
         ActiveCases = await _db.Cases.CountAsync(c => c.Status == CaseStatus.Active, ct);
         TotalRaised = await _db.Contributions.SumAsync(x => (decimal?)x.Amount, ct) ?? 0m;
-        DonorCount = await _db.Contributions.Select(x => x.DonorUserId).Distinct().CountAsync(ct);
+        DonorCount = await _db.Donors.CountAsync(ct);
+        WalletsTotal = await _db.Donors.SumAsync(d => (decimal?)d.WalletBalance, ct) ?? 0m;
     }
 }

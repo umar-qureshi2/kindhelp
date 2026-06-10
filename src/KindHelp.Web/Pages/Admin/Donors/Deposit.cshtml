@@ -1,0 +1,63 @@
+@page "{id:int}"
+@model KindHelp.Web.Pages.Admin.Donors.DepositModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Record deposit";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+}
+
+@if (Model.Donor is null)
+{
+    <h1>Donor not found</h1>
+    <a asp-page="/Admin/Donors/Index">&larr; Back</a>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="breadcrumbs muted small">
+                <a asp-page="/Admin/Donors/Index">Donors</a> &rsaquo;
+                <a asp-page="/Admin/Donors/Details" asp-route-id="@Model.Donor.Id">@Model.Donor.Label</a> &rsaquo;
+                <span>Deposit</span>
+            </div>
+            <h1>Record a deposit</h1>
+            <p class="muted">Money received from <strong>@Model.Donor.Label</strong> goes into their wallet, available to allocate to cases later.</p>
+        </div>
+    </div>
+
+    <form method="post" class="form" style="max-width: 560px;">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-grid-2">
+            <div class="form-row">
+                <label asp-for="Input.Amount">Amount (@currency)</label>
+                <input asp-for="Input.Amount" type="number" step="0.01" min="0.01" autofocus />
+                <span asp-validation-for="Input.Amount" class="text-danger"></span>
+            </div>
+            <div class="form-row">
+                <label asp-for="Input.Method">Method</label>
+                <select asp-for="Input.Method" asp-items="Html.GetEnumSelectList<KindHelp.Web.Models.ContributionMethod>()"></select>
+            </div>
+            <div class="form-row">
+                <label asp-for="Input.OccurredAtUtc">Received on</label>
+                <input asp-for="Input.OccurredAtUtc" type="date" />
+            </div>
+            <div class="form-row">
+                <label asp-for="Input.Reference">Reference <span class="muted small">(optional)</span></label>
+                <input asp-for="Input.Reference" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label asp-for="Input.Notes">Notes <span class="muted small">(optional)</span></label>
+            <textarea asp-for="Input.Notes" rows="2"></textarea>
+        </div>
+
+        <div class="row">
+            <button type="submit" class="btn btn-primary">Record deposit</button>
+            <a asp-page="/Admin/Donors/Details" asp-route-id="@Model.Donor.Id" class="btn">Cancel</a>
+        </div>
+    </form>
+}
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

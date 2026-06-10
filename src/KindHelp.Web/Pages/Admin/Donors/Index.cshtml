@@ -1,0 +1,68 @@
+@page
+@model KindHelp.Web.Pages.Admin.Donors.IndexModel
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Donors";
+    var currency = Config["KindHelp:Currency"] ?? "PKR";
+    var extra = new Dictionary<string, string?> { ["search"] = Model.Search };
+}
+
+<div class="page-head">
+    <h1>Donors</h1>
+    <a asp-page="/Admin/Donors/Create" class="btn btn-primary">+ New donor</a>
+</div>
+
+<form method="get" class="filter-bar">
+    <label>
+        Search:
+        <input type="search" name="search" value="@Model.Search" placeholder="name, email, or phone" />
+    </label>
+    <button type="submit" class="btn btn-sm">Search</button>
+    @if (!string.IsNullOrWhiteSpace(Model.Search))
+    {
+        <a asp-page="/Admin/Donors/Index" class="btn btn-sm btn-ghost">Clear</a>
+    }
+</form>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Donor</th>
+            <th>Contact</th>
+            <th>Type</th>
+            <th class="num">Wallet</th>
+            <th class="num">Contributions</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model.Donors.Items)
+        {
+            <tr>
+                <td><strong>@d.Label</strong></td>
+                <td>
+                    @if (!string.IsNullOrWhiteSpace(d.Email))      { <div class="small">@d.Email</div> }
+                    @if (!string.IsNullOrWhiteSpace(d.PhoneNumber)){ <div class="small muted">@d.PhoneNumber</div> }
+                </td>
+                <td>
+                    @if (d.IsRegistered) { <span class="badge status-active">Registered</span> }
+                    else                 { <span class="badge">Admin-managed</span> }
+                </td>
+                <td class="num"><strong>@d.WalletBalance.ToString("N0")</strong> <span class="muted small">@currency</span></td>
+                <td class="num">@d.ContributionCount</td>
+                <td class="small muted">@d.CreatedAtUtc.ToString("dd MMM yyyy")</td>
+                <td>
+                    <a asp-page="/Admin/Donors/Details" asp-route-id="@d.Id">Details</a>
+                    | <a asp-page="/Admin/Donors/Deposit" asp-route-id="@d.Id">Deposit</a>
+                </td>
+            </tr>
+        }
+        @if (!Model.Donors.Items.Any())
+        {
+            <tr><td colspan="7" class="muted">No donors yet. Create one or wait for a user to register.</td></tr>
+        }
+    </tbody>
+</table>
+
+<partial name="_Pager" model="@(new KindHelp.Web.Pages.Shared.PagerModel("/Admin/Donors/Index", Model.Donors.PageIndex, Model.Donors.TotalPages, extra))" />

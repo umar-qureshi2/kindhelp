@@ -12,18 +12,29 @@ public static class DbInitializer
         var config = services.GetRequiredService<IConfiguration>();
         var logger = services.GetRequiredService<ILogger<ApplicationDbContext>>();
 
-        // Seed roles
+        // Seed roles (always safe — purely structural).
         foreach (var role in Roles.All)
         {
             if (!await roleMgr.RoleExistsAsync(role))
-            {
                 await roleMgr.CreateAsync(new IdentityRole(role));
-            }
         }
 
-        // Seed default admin if none exists
-        var adminEmail = config["KindHelp:DefaultAdminEmail"] ?? "admin@kindhelp.local";
-        var adminPassword = config["KindHelp:DefaultAdminPassword"] ?? "ChangeMe!2026";
+        // Admin seed only when both email AND password are configured. We refuse to seed
+        // with empty or placeholder values so the committed appsettings.json can never
+        // create a known-default admin in production. Local devs supply these via
+        // appsettings.Development.json (written by setup.ps1) or env vars.
+        var adminEmail = (config["KindHelp:DefaultAdminEmail"] ?? string.Empty).Trim();
+        var adminPassword = config["KindHelp:DefaultAdminPassword"] ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            logger.LogWarning(
+                "Default admin not seeded: KindHelp:DefaultAdminEmail and KindHelp:DefaultAdminPassword are not set. " +
+                "Set them via environment variables (KindHelp__DefaultAdminEmail / KindHelp__DefaultAdminPassword) " +
+                "or appsettings.Development.json. The first admin must be created via the registration flow + manual " +
+                "role assignment, or by re-running with the env vars set.");
+            return;
+        }
 
         var admin = await userMgr.FindByEmailAsync(adminEmail);
         if (admin is null)

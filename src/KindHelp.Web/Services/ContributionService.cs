@@ -10,14 +10,14 @@ public class ContributionService : IContributionService
 
     public ContributionService(ApplicationDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<DonorCaseSummary>> GetMyCaseSummariesAsync(string userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DonorCaseSummary>> GetMyCaseSummariesAsync(int donorId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return Array.Empty<DonorCaseSummary>();
+        if (donorId <= 0) return Array.Empty<DonorCaseSummary>();
 
-        // PRIVACY: filter strictly by userId. We never join to other donors' rows.
+        // PRIVACY: filter strictly by donorId. We never join to other donors' rows.
         var aggregates = await _db.Contributions
             .AsNoTracking()
-            .Where(x => x.DonorUserId == userId)
+            .Where(x => x.DonorId == donorId)
             .GroupBy(x => x.CaseId)
             .Select(g => new
             {
@@ -53,13 +53,13 @@ public class ContributionService : IContributionService
             .ToList();
     }
 
-    public async Task<IReadOnlyList<DonorContributionRow>> GetMyContributionsAsync(string userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DonorContributionRow>> GetMyContributionsAsync(int donorId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return Array.Empty<DonorContributionRow>();
+        if (donorId <= 0) return Array.Empty<DonorContributionRow>();
 
         return await _db.Contributions
             .AsNoTracking()
-            .Where(x => x.DonorUserId == userId)
+            .Where(x => x.DonorId == donorId)
             .OrderByDescending(x => x.ReceivedAtUtc)
             .Select(x => new DonorContributionRow(
                 x.Id,
@@ -67,19 +67,38 @@ public class ContributionService : IContributionService
                 x.Case.Slug,
                 x.Case.Title,
                 x.Amount,
-                x.Method,
                 x.ReceivedAtUtc,
                 x.Reference))
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<DonorUpdateRow>> GetMyCaseUpdatesAsync(string userId, int max = 30, CancellationToken ct = default)
+    public async Task<PagedResult<DonorContributionRow>> GetMyContributionsPagedAsync(int donorId, int pageIndex, int pageSize, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return Array.Empty<DonorUpdateRow>();
+        if (donorId <= 0) return new PagedResult<DonorContributionRow>(Array.Empty<DonorContributionRow>(), 0, 1, pageSize);
+        if (pageIndex < 1) pageIndex = 1;
+        if (pageSize < 1) pageSize = 50;
 
-        // Updates from cases this donor supported. Strictly filtered via the contributions subquery.
+        var q = _db.Contributions.AsNoTracking().Where(x => x.DonorId == donorId);
+        var total = await q.CountAsync(ct);
+
+        var rows = await q
+            .OrderByDescending(x => x.ReceivedAtUtc)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new DonorContributionRow(
+                x.Id, x.CaseId, x.Case.Slug, x.Case.Title,
+                x.Amount, x.ReceivedAtUtc, x.Reference))
+            .ToListAsync(ct);
+
+        return new PagedResult<DonorContributionRow>(rows, total, pageIndex, pageSize);
+    }
+
+    public async Task<IReadOnlyList<DonorUpdateRow>> GetMyCaseUpdatesAsync(int donorId, int max = 30, CancellationToken ct = default)
+    {
+        if (donorId <= 0) return Array.Empty<DonorUpdateRow>();
+
         var supportedCaseIds = _db.Contributions
-            .Where(x => x.DonorUserId == userId)
+            .Where(x => x.DonorId == donorId)
             .Select(x => x.CaseId)
             .Distinct();
 
@@ -109,22 +128,35 @@ public class ContributionService : IContributionService
             .ToListAsync(ct);
     }
 
-    public async Task<Contribution> RecordAsync(Contribution input, string recordedByUserId, CancellationToken ct = default)
-    {
-        input.RecordedByUserId = recordedByUserId;
-        input.CreatedAtUtc = DateTime.UtcNow;
-        if (input.ReceivedAtUtc == default) input.ReceivedAtUtc = DateTime.UtcNow;
-
-        _db.Contributions.Add(input);
-        await _db.SaveChangesAsync(ct);
-        return input;
-    }
-
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await _db.Contributions.FindAsync(new object?[] { id }, ct);
+        var entity = await _db.Contributions
+            .Include(c => c.WalletTransaction)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (entity is null) return;
+
+        // Reverse the wallet movement: credit the donor's wallet back by the amount,
+        // and write a compensating Adjustment so the audit trail stays intact.
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var donor = await _db.Donors.FirstOrDefaultAsync(d => d.Id == entity.DonorId, ct);
+        if (donor is not null)
+        {
+            donor.WalletBalance += entity.Amount;
+            _db.WalletTransactions.Add(new WalletTransaction
+            {
+                DonorId = donor.Id,
+                Type = WalletTransactionType.Adjustment,
+                Amount = entity.Amount,
+                BalanceAfter = donor.WalletBalance,
+                OccurredAtUtc = DateTime.UtcNow,
+                Notes = $"Reverted contribution #{entity.Id} to case {entity.CaseId}",
+                CaseId = entity.CaseId
+            });
+        }
+
         _db.Contributions.Remove(entity);
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
     }
 }

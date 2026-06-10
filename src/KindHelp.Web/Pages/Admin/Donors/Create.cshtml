@@ -1,0 +1,46 @@
+@page
+@model KindHelp.Web.Pages.Admin.Donors.CreateModel
+@{
+    ViewData["Title"] = "New donor";
+}
+
+<h1>Create a donor</h1>
+<p class="muted">For people who give without registering an account. Provide either an email or a phone number so they can be looked up later.</p>
+
+<form method="post" class="form" style="max-width: 560px;">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="form-row">
+        <label asp-for="Input.DisplayName">Display name <span class="muted small">(optional)</span></label>
+        <input asp-for="Input.DisplayName" autocomplete="name" />
+        <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+        <small>Shown only to admins; never to other donors.</small>
+    </div>
+
+    <div class="form-grid-2">
+        <div class="form-row">
+            <label asp-for="Input.Email">Email <span class="muted small">(at least one of email or phone required)</span></label>
+            <input asp-for="Input.Email" autocomplete="email" type="email" />
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+        </div>
+        <div class="form-row">
+            <label asp-for="Input.PhoneNumber">Phone</label>
+            <input asp-for="Input.PhoneNumber" autocomplete="tel" type="tel" />
+            <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label asp-for="Input.Notes">Admin notes <span class="muted small">(optional)</span></label>
+        <textarea asp-for="Input.Notes" rows="3"></textarea>
+    </div>
+
+    <div class="row">
+        <button type="submit" class="btn btn-primary">Create donor</button>
+        <a asp-page="/Admin/Donors/Index" class="btn">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -54,6 +54,8 @@ builder.Services.AddRazorPages(options =>
 // ---------- App services ----------
 builder.Services.AddScoped<ICaseService, CaseService>();
 builder.Services.AddScoped<IContributionService, ContributionService>();
+builder.Services.AddScoped<IDonorService, DonorService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 // ---------- Build ----------

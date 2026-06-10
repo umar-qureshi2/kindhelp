@@ -247,9 +247,8 @@ namespace KindHelp.Web.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DonorUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("DonorId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Method")
                         .HasColumnType("integer");
@@ -264,13 +263,124 @@ namespace KindHelp.Web.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)");
 
+                    b.Property<int?>("WalletTransactionId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("DonorUserId");
+                    b.HasIndex("DonorId");
 
                     b.HasIndex("CaseId", "ReceivedAtUtc");
 
                     b.ToTable("Contributions");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.Donor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(800)
+                        .HasColumnType("character varying(800)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<decimal>("WalletBalance")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique()
+                        .HasFilter("\"ApplicationUserId\" IS NOT NULL");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("\"Email\" IS NOT NULL");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasFilter("\"PhoneNumber\" IS NOT NULL");
+
+                    b.ToTable("Donors");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.WalletTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int?>("CaseId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ContributionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DonorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RecordedByUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContributionId")
+                        .IsUnique();
+
+                    b.HasIndex("CaseId", "OccurredAtUtc");
+
+                    b.HasIndex("DonorId", "OccurredAtUtc");
+
+                    b.ToTable("WalletTransactions");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -435,13 +545,48 @@ namespace KindHelp.Web.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KindHelp.Web.Models.ApplicationUser", "Donor")
+                    b.HasOne("KindHelp.Web.Models.Donor", "Donor")
                         .WithMany("Contributions")
-                        .HasForeignKey("DonorUserId")
+                        .HasForeignKey("DonorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Case");
+
+                    b.Navigation("Donor");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.Donor", b =>
+                {
+                    b.HasOne("KindHelp.Web.Models.ApplicationUser", "ApplicationUser")
+                        .WithOne("Donor")
+                        .HasForeignKey("KindHelp.Web.Models.Donor", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApplicationUser");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.WalletTransaction", b =>
+                {
+                    b.HasOne("KindHelp.Web.Models.Case", "Case")
+                        .WithMany()
+                        .HasForeignKey("CaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KindHelp.Web.Models.Contribution", "Contribution")
+                        .WithOne("WalletTransaction")
+                        .HasForeignKey("KindHelp.Web.Models.WalletTransaction", "ContributionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("KindHelp.Web.Models.Donor", "Donor")
+                        .WithMany("WalletTransactions")
+                        .HasForeignKey("DonorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Case");
+
+                    b.Navigation("Contribution");
 
                     b.Navigation("Donor");
                 });
@@ -499,7 +644,7 @@ namespace KindHelp.Web.Migrations
 
             modelBuilder.Entity("KindHelp.Web.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("Contributions");
+                    b.Navigation("Donor");
                 });
 
             modelBuilder.Entity("KindHelp.Web.Models.Case", b =>
@@ -509,6 +654,18 @@ namespace KindHelp.Web.Migrations
                     b.Navigation("Photos");
 
                     b.Navigation("Updates");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.Contribution", b =>
+                {
+                    b.Navigation("WalletTransaction");
+                });
+
+            modelBuilder.Entity("KindHelp.Web.Models.Donor", b =>
+                {
+                    b.Navigation("Contributions");
+
+                    b.Navigation("WalletTransactions");
                 });
 #pragma warning restore 612, 618
         }

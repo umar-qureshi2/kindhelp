@@ -30,7 +30,7 @@ public class CaseService : ICaseService
                     ?? c.Photos.OrderBy(p => p.SortOrder).Select(p => p.RelativePath).FirstOrDefault(),
                 c.GoalAmount,
                 c.Contributions.Sum(x => (decimal?)x.Amount) ?? 0m,
-                c.Contributions.Select(x => x.DonorUserId).Distinct().Count()))
+                c.Contributions.Select(x => x.DonorId).Distinct().Count()))
             .ToListAsync(ct);
     }
 
@@ -50,7 +50,7 @@ public class CaseService : ICaseService
                     ?? c.Photos.OrderBy(p => p.SortOrder).Select(p => p.RelativePath).FirstOrDefault(),
                 c.GoalAmount,
                 c.Contributions.Sum(x => (decimal?)x.Amount) ?? 0m,
-                c.Contributions.Select(x => x.DonorUserId).Distinct().Count()))
+                c.Contributions.Select(x => x.DonorId).Distinct().Count()))
             .ToListAsync(ct);
     }
 
@@ -67,14 +67,14 @@ public class CaseService : ICaseService
 
         if (c is null) return null;
 
-        // PRIVACY: aggregate only — sum + distinct donor count.
+        // PRIVACY: aggregate only — sum + distinct donor count by DonorId.
         var raised = await _db.Contributions
             .Where(x => x.CaseId == c.Id)
             .SumAsync(x => (decimal?)x.Amount, ct) ?? 0m;
 
         var donorCount = await _db.Contributions
             .Where(x => x.CaseId == c.Id)
-            .Select(x => x.DonorUserId)
+            .Select(x => x.DonorId)
             .Distinct()
             .CountAsync(ct);
 

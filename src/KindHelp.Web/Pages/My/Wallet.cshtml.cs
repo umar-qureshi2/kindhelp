@@ -8,30 +8,31 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace KindHelp.Web.Pages.My;
 
 [Authorize]
-public class ContributionsModel : MyPageBase
+public class WalletModel : MyPageBase
 {
-    private readonly IContributionService _contributions;
+    private readonly IWalletService _wallet;
 
-    public ContributionsModel(
+    public WalletModel(
         UserManager<ApplicationUser> userManager,
         IDonorService donors,
-        IContributionService contributions)
+        IWalletService wallet)
         : base(userManager, donors)
     {
-        _contributions = contributions;
+        _wallet = wallet;
     }
 
     [BindProperty(SupportsGet = true)] public int PageIndex { get; set; } = 1;
-    public PagedResult<DonorContributionRow> Rows { get; private set; } =
-        new PagedResult<DonorContributionRow>(Array.Empty<DonorContributionRow>(), 0, 1, 50);
+    public decimal Balance { get; private set; }
+    public PagedResult<WalletHistoryRow> History { get; private set; } =
+        new PagedResult<WalletHistoryRow>(Array.Empty<WalletHistoryRow>(), 0, 1, 50);
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
         var donor = await ResolveCurrentDonorAsync(ct);
         if (donor is null) return Challenge();
 
-        // PRIVACY: strict per-donor filter; never accept a donorId from the request.
-        Rows = await _contributions.GetMyContributionsPagedAsync(donor.Id, PageIndex, 50, ct);
+        Balance = donor.WalletBalance;
+        History = await _wallet.GetHistoryPagedAsync(donor.Id, PageIndex, 50, ct);
         return Page();
     }
 }

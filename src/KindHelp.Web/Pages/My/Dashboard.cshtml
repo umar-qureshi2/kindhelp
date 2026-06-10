@@ -2,20 +2,24 @@
 @model KindHelp.Web.Pages.My.DashboardModel
 @inject IConfiguration Config
 @{
-    ViewData["Title"] = "My dashboard";
+    ViewData["Title"] = "Dashboard";
     var currency = Config["KindHelp:Currency"] ?? "PKR";
 }
 
 <div class="dashboard-head">
     <h1>Your private dashboard</h1>
     <p class="muted">
-        Only you can see this page. Other contributors do not see your name, your activity, or these totals.
+        Only you can see this. Other contributors do not see your name, your activity, or these totals.
     </p>
 </div>
 
 <div class="stat-row">
     <div class="stat-card">
-        <div class="stat-label">Total contributed</div>
+        <div class="stat-label">Wallet balance</div>
+        <div class="stat-value">@Model.WalletBalance.ToString("N0") <small>@currency</small></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total allocated</div>
         <div class="stat-value">@Model.TotalContributed.ToString("N0") <small>@currency</small></div>
     </div>
     <div class="stat-card">
@@ -23,9 +27,15 @@
         <div class="stat-value">@Model.Summaries.Count</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Contributions made</div>
+        <div class="stat-label">Allocations made</div>
         <div class="stat-value">@Model.Summaries.Sum(s => s.MyContributionCount)</div>
     </div>
+</div>
+
+<div class="row">
+    <a asp-page="/My/Wallet" class="btn btn-primary">View wallet</a>
+    <a asp-page="/My/Contributions" class="btn">All my contributions</a>
+    <a asp-page="/Cases/Index" class="btn btn-ghost">Browse cases</a>
 </div>
 
 <section>
@@ -58,8 +68,8 @@
                         <h3>@s.Title</h3>
                         <div class="muted small">@s.Status</div>
                         <div class="my-case-meta">
-                            <span><strong>@s.MyTotal.ToString("N0") @currency</strong> from you</span>
-                            <span class="muted">&bull; @s.MyContributionCount entr@(s.MyContributionCount == 1 ? "y" : "ies")</span>
+                            <strong>@s.MyTotal.ToString("N0") @currency</strong> from you
+                            <span class="muted">&middot; @s.MyContributionCount allocation@(s.MyContributionCount == 1 ? "" : "s")</span>
                         </div>
                         <div class="muted small">Last on @s.LastContributionUtc.ToString("dd MMM yyyy")</div>
                     </div>

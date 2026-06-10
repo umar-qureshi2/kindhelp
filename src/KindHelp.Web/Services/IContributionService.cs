@@ -18,7 +18,6 @@ public record DonorContributionRow(
     string CaseSlug,
     string CaseTitle,
     decimal Amount,
-    ContributionMethod Method,
     DateTime ReceivedAtUtc,
     string? Reference);
 
@@ -33,18 +32,18 @@ public record DonorUpdateRow(
 
 public interface IContributionService
 {
-    /// <summary>For donor dashboard — strictly filtered to the given user id.</summary>
-    Task<IReadOnlyList<DonorCaseSummary>> GetMyCaseSummariesAsync(string userId, CancellationToken ct = default);
+    /// <summary>For donor dashboard — accepts a donorId (NOT an ApplicationUser id) and filters strictly.</summary>
+    Task<IReadOnlyList<DonorCaseSummary>> GetMyCaseSummariesAsync(int donorId, CancellationToken ct = default);
 
-    /// <summary>For donor dashboard — strictly filtered to the given user id.</summary>
-    Task<IReadOnlyList<DonorContributionRow>> GetMyContributionsAsync(string userId, CancellationToken ct = default);
+    Task<IReadOnlyList<DonorContributionRow>> GetMyContributionsAsync(int donorId, CancellationToken ct = default);
 
-    /// <summary>Updates from cases the donor has supported. Strictly filtered.</summary>
-    Task<IReadOnlyList<DonorUpdateRow>> GetMyCaseUpdatesAsync(string userId, int max = 30, CancellationToken ct = default);
+    Task<PagedResult<DonorContributionRow>> GetMyContributionsPagedAsync(int donorId, int pageIndex, int pageSize, CancellationToken ct = default);
+
+    /// <summary>Updates from cases the donor has supported. Strictly filtered by donorId.</summary>
+    Task<IReadOnlyList<DonorUpdateRow>> GetMyCaseUpdatesAsync(int donorId, int max = 30, CancellationToken ct = default);
 
     /// <summary>Admin-only: full list of contributions for a case.</summary>
     Task<IReadOnlyList<Contribution>> GetForCaseAdminAsync(int caseId, CancellationToken ct = default);
 
-    Task<Contribution> RecordAsync(Contribution input, string recordedByUserId, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
 }

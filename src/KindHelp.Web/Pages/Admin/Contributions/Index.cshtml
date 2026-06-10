@@ -4,11 +4,12 @@
 @{
     ViewData["Title"] = "Contributions";
     var currency = Config["KindHelp:Currency"] ?? "PKR";
+    var extra = new Dictionary<string, string?> { ["caseId"] = Model.CaseId?.ToString() };
 }
 
 <div class="page-head">
     <h1>Contributions</h1>
-    <a asp-page="/Admin/Contributions/Create" class="btn btn-primary">Record contribution</a>
+    <a asp-page="/Admin/Contributions/Create" class="btn btn-primary">+ Allocate to case</a>
 </div>
 
 <form method="get" class="filter-bar">
@@ -31,47 +32,49 @@
             <th>Case</th>
             <th>Donor</th>
             <th class="num">Amount</th>
-            <th>Method</th>
             <th>Reference</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var c in Model.Rows)
+        @foreach (var c in Model.Rows.Items)
         {
             <tr>
                 <td>@c.ReceivedAtUtc.ToString("dd MMM yyyy")</td>
                 <td>@c.Case.Title</td>
                 <td>
-                    @(c.Donor.DisplayName ?? c.Donor.Email)
-                    <br /><span class="muted small">@c.Donor.Email</span>
+                    <a asp-page="/Admin/Donors/Details" asp-route-id="@c.Donor.Id">@c.Donor.Label</a>
+                    <br />
+                    @if (!string.IsNullOrWhiteSpace(c.Donor.Email))      { <span class="muted small">@c.Donor.Email</span> }
+                    @if (!string.IsNullOrWhiteSpace(c.Donor.PhoneNumber)){ <span class="muted small">@c.Donor.PhoneNumber</span> }
                 </td>
-                <td class="num"><strong>@c.Amount.ToString("N0")</strong> @currency</td>
-                <td>@c.Method</td>
+                <td class="num"><strong>@c.Amount.ToString("N0")</strong> <span class="muted small">@currency</span></td>
                 <td><span class="muted small">@c.Reference</span></td>
                 <td>
                     <form method="post" asp-page-handler="Delete" class="inline">
                         <input type="hidden" name="id" value="@c.Id" />
                         <input type="hidden" name="caseId" value="@Model.CaseId" />
                         <button class="link-button text-danger" type="submit"
-                                onclick="return confirm('Delete this contribution?');">Delete</button>
+                                onclick="return confirm('Delete this contribution? The amount will be credited back to the donor wallet.');">Delete</button>
                     </form>
                 </td>
             </tr>
         }
-        @if (!Model.Rows.Any())
+        @if (!Model.Rows.Items.Any())
         {
-            <tr><td colspan="7" class="muted">No contributions yet.</td></tr>
+            <tr><td colspan="6" class="muted">No contributions yet.</td></tr>
         }
     </tbody>
-    @if (Model.Rows.Any())
+    @if (Model.Rows.Items.Any())
     {
         <tfoot>
             <tr>
-                <td colspan="3"><strong>Total in view</strong></td>
-                <td class="num"><strong>@Model.Rows.Sum(x => x.Amount).ToString("N0") @currency</strong></td>
-                <td colspan="3"></td>
+                <td colspan="3"><strong>Page total</strong></td>
+                <td class="num"><strong>@Model.PageTotal.ToString("N0") @currency</strong></td>
+                <td colspan="2"></td>
             </tr>
         </tfoot>
     }
 </table>
+
+<partial name="_Pager" model="@(new KindHelp.Web.Pages.Shared.PagerModel("/Admin/Contributions/Index", Model.Rows.PageIndex, Model.Rows.TotalPages, extra))" />
