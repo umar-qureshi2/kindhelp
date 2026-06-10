@@ -73,7 +73,16 @@ else
                                 case KindHelp.Web.Models.WalletTransactionType.Deposit:    <text>Deposit</text> break;
                                 case KindHelp.Web.Models.WalletTransactionType.Allocation: <text>Allocated to <a asp-page="/Cases/Details" asp-route-slug="@t.CaseSlug">@t.CaseTitle</a></text> break;
                                 case KindHelp.Web.Models.WalletTransactionType.Refund:     <text>Refund</text> break;
-                                default:                                                   <text>Adjustment</text> break;
+                                default:
+                                    if (t.CorrectsTransactionId.HasValue)
+                                    {
+                                        <text>Correction of #@t.CorrectsTransactionId</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Adjustment</text>
+                                    }
+                                    break;
                             }
                         </div>
                         <div class="txn-meta">
@@ -82,6 +91,18 @@ else
                             @if (t.Method.HasValue) { <text>&middot; @t.Method</text> }
                             <text> &middot; balance after: @t.BalanceAfter.ToString("N0") @currency</text>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(t.Notes))
+                        {
+                            <div class="txn-meta" style="font-style: italic;">@t.Notes</div>
+                        }
+                        @if ((t.Type == KindHelp.Web.Models.WalletTransactionType.Deposit
+                              || t.Type == KindHelp.Web.Models.WalletTransactionType.Allocation)
+                             && !t.CorrectsTransactionId.HasValue)
+                        {
+                            <div class="txn-meta">
+                                <a asp-page="/Admin/WalletTransactions/Correct" asp-route-id="@t.Id">Correct amount</a>
+                            </div>
+                        }
                     </div>
                     <div class="txn-amount @amountClass">@sign@Math.Abs(t.Amount).ToString("N0") <span class="muted small">@currency</span></div>
                 </div>

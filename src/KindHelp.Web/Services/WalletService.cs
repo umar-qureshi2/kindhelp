@@ -39,6 +39,12 @@ public class WalletService : IWalletService
             () => AdjustCoreAsync(donorId, amount, reason, recordedByUserId, ct),
             "Adjust", ct);
 
+    public Task<WalletTransaction> CorrectAmountAsync(
+        int originalTransactionId, decimal correctedAmount, string reason, string recordedByUserId, CancellationToken ct = default)
+        => WithConcurrencyRetryAsync(
+            () => CorrectAmountCoreAsync(originalTransactionId, correctedAmount, reason, recordedByUserId, ct),
+            "Correct", ct);
+
     public async Task<IReadOnlyList<WalletHistoryRow>> GetHistoryAsync(int donorId, CancellationToken ct = default)
     {
         return await _db.WalletTransactions
@@ -56,7 +62,9 @@ public class WalletService : IWalletService
                 t.Method,
                 t.CaseId,
                 t.Case != null ? t.Case.Title : null,
-                t.Case != null ? t.Case.Slug  : null))
+                t.Case != null ? t.Case.Slug  : null,
+                t.CorrectsWalletTransactionId,
+                t.Notes))
             .ToListAsync(ct);
     }
 
@@ -77,7 +85,9 @@ public class WalletService : IWalletService
                 t.Id, t.Type, t.Amount, t.BalanceAfter, t.OccurredAtUtc,
                 t.Reference, t.Method, t.CaseId,
                 t.Case != null ? t.Case.Title : null,
-                t.Case != null ? t.Case.Slug  : null))
+                t.Case != null ? t.Case.Slug  : null,
+                t.CorrectsWalletTransactionId,
+                t.Notes))
             .ToListAsync(ct);
 
         return new PagedResult<WalletHistoryRow>(rows, total, pageIndex, pageSize);
@@ -201,6 +211,78 @@ public class WalletService : IWalletService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return entry;
+    }
+
+    private async Task<WalletTransaction> CorrectAmountCoreAsync(
+        int originalTransactionId, decimal correctedAmount, string reason, string recordedByUserId, CancellationToken ct)
+    {
+        if (correctedAmount <= 0)
+            throw new InvalidOperationException("Corrected amount must be positive.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new InvalidOperationException("A reason is required when correcting a wallet transaction.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var original = await _db.WalletTransactions
+            .Include(t => t.Contribution)
+            .FirstOrDefaultAsync(t => t.Id == originalTransactionId, ct)
+            ?? throw new InvalidOperationException("Original transaction not found.");
+
+        if (original.Type != WalletTransactionType.Deposit && original.Type != WalletTransactionType.Allocation)
+            throw new InvalidOperationException("Only deposits and allocations can be corrected. Use Adjust for other changes.");
+
+        // Don't allow correcting a correction (avoids confusing chains).
+        if (original.CorrectsWalletTransactionId is not null)
+            throw new InvalidOperationException("This entry is itself a correction. Correct the underlying original instead.");
+
+        var donor = await _db.Donors.FirstOrDefaultAsync(d => d.Id == original.DonorId, ct)
+            ?? throw new InvalidOperationException("Donor not found.");
+
+        // Wallet impact of the corrected entry would be:
+        //   Deposit:    +correctedAmount  (credit)
+        //   Allocation: -correctedAmount  (debit)
+        var correctedSignedImpact = original.Type == WalletTransactionType.Deposit
+            ? correctedAmount
+            : -correctedAmount;
+
+        var delta = correctedSignedImpact - original.Amount;
+        if (delta == 0)
+            throw new InvalidOperationException("Corrected amount equals the original — nothing to change.");
+
+        var newBalance = donor.WalletBalance + delta;
+        if (newBalance < 0)
+            throw new InsufficientWalletBalanceException(donor.WalletBalance, -delta);
+
+        donor.WalletBalance = newBalance;
+
+        var correction = new WalletTransaction
+        {
+            DonorId = donor.Id,
+            Type = WalletTransactionType.Adjustment,
+            Amount = delta,
+            BalanceAfter = newBalance,
+            OccurredAtUtc = DateTime.UtcNow,
+            CaseId = original.CaseId,
+            CorrectsWalletTransactionId = original.Id,
+            Notes = $"Correction of transaction #{original.Id} ({original.Type}): {reason.Trim()}",
+            RecordedByUserId = recordedByUserId
+        };
+        _db.WalletTransactions.Add(correction);
+
+        // If the original was an Allocation, sync the linked Contribution.Amount so that
+        // the case's "raised" total reflects the corrected figure.
+        if (original.Type == WalletTransactionType.Allocation && original.Contribution is not null)
+        {
+            original.Contribution.Amount = correctedAmount;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        _logger.LogInformation(
+            "Wallet transaction #{Original} corrected by {Delta:N2} (new balance {Balance:N2}); reason: {Reason}",
+            original.Id, delta, newBalance, reason);
+        return correction;
     }
 
     // ---------- Concurrency retry ----------

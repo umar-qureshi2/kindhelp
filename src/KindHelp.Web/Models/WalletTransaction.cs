@@ -60,4 +60,12 @@ public class WalletTransaction
 
     [StringLength(400)]
     public string? Notes { get; set; }
+
+    /// <summary>
+    /// When this transaction is an admin Correction, points back at the original (wrong)
+    /// transaction it adjusts. Null for normal entries. Original rows are never mutated —
+    /// the correction is a separate Adjustment carrying the delta and the reason.
+    /// </summary>
+    public int? CorrectsWalletTransactionId { get; set; }
+    public WalletTransaction? CorrectsWalletTransaction { get; set; }
 }

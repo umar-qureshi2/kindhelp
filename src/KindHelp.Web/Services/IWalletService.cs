@@ -25,7 +25,9 @@ public record WalletHistoryRow(
     ContributionMethod? Method,
     int? CaseId,
     string? CaseTitle,
-    string? CaseSlug);
+    string? CaseSlug,
+    int? CorrectsTransactionId,
+    string? Notes);
 
 public interface IWalletService
 {
@@ -58,6 +60,19 @@ public interface IWalletService
     Task<WalletTransaction> AdjustAsync(
         int donorId,
         decimal amount,
+        string reason,
+        string recordedByUserId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Admin-only: fix a typo on a prior Deposit or Allocation. Keeps the original row
+    /// immutable for audit and appends a compensating Adjustment carrying the delta.
+    /// If the original was an Allocation, also updates the linked Contribution.Amount.
+    /// Throws if the resulting wallet balance would go negative.
+    /// </summary>
+    Task<WalletTransaction> CorrectAmountAsync(
+        int originalTransactionId,
+        decimal correctedAmount,
         string reason,
         string recordedByUserId,
         CancellationToken ct = default);

@@ -55,10 +55,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(d => d.WalletBalance).HasColumnType("numeric(18,2)");
 
             // Use PostgreSQL's built-in xmin system column as an optimistic concurrency token.
-            // Any UPDATE to a Donor row will increment xmin; if two transactions both read
-            // balance=100 and try to debit, only the first commits — the second sees
-            // DbUpdateConcurrencyException and WalletService retries with a fresh read.
-            e.UseXminAsConcurrencyToken();
+            // Any UPDATE to a Donor row increments xmin server-side; we declare it as a
+            // shadow property mapped to the system column with IsRowVersion(), which is the
+            // EF Core 8 idiomatic way (the old UseXminAsConcurrencyToken() was deprecated
+            // in favour of this). If two transactions both read balance=100 and try to debit,
+            // only the first commits — the second sees DbUpdateConcurrencyException and
+            // WalletService retries with a fresh read.
+            e.Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsConcurrencyToken();
 
             // Belt-and-braces format check: any stored phone number must contain only digits
             // (optionally led by '+'). Service-level NormalizePhone enforces this on writes
@@ -79,6 +86,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(t => t.BalanceAfter).HasColumnType("numeric(18,2)");
             e.HasIndex(t => new { t.DonorId, t.OccurredAtUtc });
             e.HasIndex(t => new { t.CaseId, t.OccurredAtUtc });
+            e.HasIndex(t => t.CorrectsWalletTransactionId);
 
             e.HasOne(t => t.Donor)
                 .WithMany(d => d.WalletTransactions)
@@ -94,6 +102,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .WithOne(c => c.WalletTransaction!)
                 .HasForeignKey<WalletTransaction>(t => t.ContributionId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Self-referencing FK: corrections point at the original transaction they adjust.
+            e.HasOne(t => t.CorrectsWalletTransaction)
+                .WithMany()
+                .HasForeignKey(t => t.CorrectsWalletTransactionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<Contribution>(e =>
